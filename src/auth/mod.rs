@@ -1,4 +1,4 @@
-//! App-scheme authentication (extracted from the mobile app, no OAuth).
+//! Mobile session authentication (password or Google sign-in).
 //!
 //! Login exchanges `userName` + `password` for a server-issued triple
 //! (`serverId`, `secretKey`, `deviceKey`) which is then sent as request
@@ -6,6 +6,7 @@
 //! (see `spec://common/prop-000#secrets`).
 
 pub mod device;
+pub mod google;
 
 use std::path::PathBuf;
 
@@ -145,15 +146,28 @@ impl FileStore {
     }
 
     pub fn save(&self, triple: &Triple) -> Result<()> {
-        if let Some(parent) = self.path.parent() {
+        use std::io::Write;
+        if let Some(parent) = self.path.parent().filter(|p| !p.as_os_str().is_empty()) {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(&self.path, serde_json::to_string_pretty(triple)?)?;
+        // Restrictive permissions from creation, then atomic replacement: no
+        // world-readable window and no truncated credentials on a failed write.
+        let parent = self
+            .path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or_else(|| std::path::Path::new("."));
+        let mut file = tempfile::NamedTempFile::new_in(parent)?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&self.path, std::fs::Permissions::from_mode(0o600))?;
+            file.as_file()
+                .set_permissions(std::fs::Permissions::from_mode(0o600))?;
         }
+        file.write_all(serde_json::to_string_pretty(triple)?.as_bytes())?;
+        file.as_file().sync_all()?;
+        file.persist(&self.path)
+            .map_err(|e| AppError::Io(e.error))?;
         Ok(())
     }
 

@@ -60,6 +60,7 @@ fn all_leaf_help_renders() {
     // (args, marker unique to that screen)
     let screens: &[(&[&str], &str)] = &[
         (&["auth", "login"], "USERNAME"),
+        (&["auth", "google"], "--token-stdin"),
         (&["auth", "register"], "password"),
         (&["auth", "forgot-password"], "user"),
         (&["auth", "reset-password"], "code"),

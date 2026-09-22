@@ -37,7 +37,7 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Log in with your fatsecret.com account (password via TTY prompt)
+    /// Log in with your FatSecret account (Google or password)
     Auth(AuthArgs),
     /// Search the food database
     Foods(FoodsArgs),
@@ -112,6 +112,15 @@ pub struct AuthArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum AuthAction {
+    /// Sign in to an existing Google-linked account using Playwriter and Chrome
+    Google {
+        /// Read a Google ID token from stdin instead of opening the sign-in tab
+        #[arg(long)]
+        token_stdin: bool,
+        /// Seconds to wait for interactive browser sign-in
+        #[arg(long, default_value_t = 600, value_parser = clap::value_parser!(u64).range(1..=3600))]
+        timeout: u64,
+    },
     /// Log in as USERNAME (asks for the password interactively)
     Login {
         /// FatSecret username or email

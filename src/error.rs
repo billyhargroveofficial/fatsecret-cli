@@ -8,7 +8,9 @@ pub enum AppError {
     #[error("login failed: {0}")]
     Login(String),
 
-    #[error("not logged in: run `fatsecret-cli auth login <USERNAME>` first")]
+    #[error(
+        "not logged in: run `fatsecret-cli auth google` or `fatsecret-cli auth login <USERNAME>` first"
+    )]
     NotLoggedIn,
 
     #[error("no device model: set FATSECRET_DEVICE_MODEL or device_model in the profile file")]

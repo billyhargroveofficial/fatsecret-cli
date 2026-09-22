@@ -10,6 +10,32 @@ use crate::output::emit;
 pub async fn run(app: &AppConfig, format: OutputFormat, args: AuthArgs) -> Result<()> {
     let store = FileStore::platform()?;
     match args.action {
+        AuthAction::Google {
+            token_stdin,
+            timeout,
+        } => {
+            // Authentication never follows redirects with a Google credential.
+            let http = reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .connect_timeout(std::time::Duration::from_secs(15))
+                .timeout(std::time::Duration::from_secs(45))
+                .build()?;
+            let token = if token_stdin {
+                crate::auth::google::read_stdin_token().await?
+            } else {
+                crate::auth::google::browser_token(timeout).await?
+            };
+            let device_id = ensure_device_id(&http, app.device_id.as_deref()).await?;
+            let triple = crate::auth::google::login(&http, app, &token, &device_id).await?;
+            store.save(&triple)?;
+            let human = format!("logged in as {} (Google)", triple.username);
+            emit(
+                format,
+                &human,
+                &human,
+                &serde_json::json!({"status":"logged in","username":triple.username,"method":"google"}),
+            )
+        }
         AuthAction::Login { username } => {
             let http = http_client();
             // Per-install identity first: explicit config, stored fid,

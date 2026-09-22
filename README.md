@@ -2,6 +2,8 @@
 
 English | [Русский](README.ru.md)
 
+This fork adds Google sign-in to [vasyza/fatsecret-cli](https://github.com/vasyza/fatsecret-cli). Run `fatsecret-cli auth google` once, then use the normal food search and diary commands. No emulator or background CLI process is needed.
+
 A Rust command-line client for FatSecret. Search foods and recipes, look up barcodes, add food diary entries, record weight, and read account data from your terminal.
 
 The CLI uses the mobile app's authentication and endpoints, not the public FatSecret Platform API. You sign in with a FatSecret account; no developer application or Platform API subscription is required. This is an unofficial client and is not affiliated with or endorsed by FatSecret. Mobile endpoints can change without notice.
@@ -38,11 +40,22 @@ cargo build --release --locked
 ./target/release/fatsecret-cli --help
 ```
 
-The manifest declares Rust 1.85, but the source uses let-chain syntax that requires Rust 1.88 or newer. The declared minimum has not been validated against the locked dependencies; use current stable rather than assuming 1.85 works.
+The manifest requires Rust 1.88 or newer. Use current stable with the locked dependencies.
 
 Network commands require access to FatSecret. Initial device registration also contacts Firebase Installations. The client uses rustls for TLS. Credential-file permissions are restricted to the owner on Unix; other operating systems need appropriate filesystem access controls. This is not a claim that every platform has been tested.
 
 ## Quick start
+
+For an account linked to Google, use an existing Chrome with [Playwriter](https://github.com/remorses/playwriter) connected:
+
+```sh
+fatsecret-cli auth google
+fatsecret-cli config set market_locale RU
+fatsecret-cli config set language_locale ru
+fatsecret-cli foods search "гречка" --format json
+```
+
+The command opens FatSecret's own Google sign-in button. Choose the same Google account you use in the mobile app. It saves the resulting FatSecret session and closes its temporary tabs, including the Google popup. The existing browser stays running; later searches and diary operations do not use it. No password reset or developer API subscription is needed. See [Google authentication details](docs/google-auth.md).
 
 Log in from an interactive terminal. The password prompt does not echo your input.
 
@@ -89,7 +102,7 @@ The status below distinguishes implemented commands from observed live behavior.
 
 | Area | Available behavior | Limits and observed status |
 | --- | --- | --- |
-| Authentication | Login, local status/logout, registration, password recovery | Login and reset-email delivery have been checked live. Registration and reset completion are implemented, but not established as fully verified workflows. No social-login flow. |
+| Authentication | Google sign-in, password login, local status/logout, registration, password recovery | Google token exchange checked live against an existing account. Registration and reset completion are implemented without the same verification claim. |
 | Foods | Search, details, popular servings, dietary-preference types/votes, barcode lookup | Search, details, popular servings, types, and barcode lookup have live-check evidence. Vote requests are implemented; this does not establish every type/value combination. |
 | Recipes | Search, details, categories, cookbook search/count | Search, details, categories, and count have been checked live. Cookbook search is implemented without the same verification claim. |
 | Food diary | Day read with history, add, delete and copy | Add/delete/copy verified live. Day lists entry IDs, macros and totals. No month view. Date caveats apply. |
@@ -103,7 +116,7 @@ The status below distinguishes implemented commands from observed live behavior.
 | Learning | Content, progress, bookmarks in the progress response | Reads have been checked live. No lesson-progress or bookmark writes. |
 | Food groups | Static group data | Checked live; still requires login. |
 
-Not implemented: favorites management, custom-food/image workflows, social login, AI/image recognition, gamification/streak updates, and complete mobile-app parity. A command appearing in `--help` means it exists, not that its remote workflow is verified.
+Not implemented: favorites management, custom-food/image workflows, Apple/Facebook login, AI/image recognition, gamification/streak updates, and complete mobile-app parity. A command appearing in `--help` means it exists, not that its remote workflow is verified.
 
 ## Command reference
 
@@ -134,6 +147,8 @@ Global options can also follow subcommands. `RUST_LOG` overrides `-v` when set.
 
 | Command | Behavior |
 | --- | --- |
+| `auth google [--timeout 600]` | Opens Google sign-in through Playwriter in an existing Chrome, stores the linked FatSecret session, and cleans up its tabs. |
+| `auth google --token-stdin` | Advanced integration: reads a fresh Google ID token from a pipe; never supply tokens in command arguments. |
 | `auth login USERNAME` | Accepts a username or email, prompts for a password, and stores login credentials. |
 | `auth register EMAIL USERNAME --birth-date YYYY-MM-DD --gender GENDER [--country US]` | Creates an account; prompts for a password. Gender is passed through as supplied, for example `Male` or `Female`. |
 | `auth forgot-password EMAIL` | Sends a password-reset email. |
@@ -143,7 +158,7 @@ Global options can also follow subcommands. `RUST_LOG` overrides `-v` when set.
 
 Registration also accepts `--current-weight-kg NUMBER`, `--goal-weight-kg NUMBER`, `--height-cm NUMBER`, and `--first-name TEXT`. Country defaults to `US`. Registration does not log you in automatically; follow any account confirmation steps and then run `auth login`.
 
-There is no password flag, password environment variable, or stdin password mode. Run password prompts in a real terminal. Social-provider tokens are not accepted as a login method.
+There is no password flag, password environment variable, or stdin password mode. Run password prompts in a real terminal. Google login uses a short-lived Google ID token; only the resulting FatSecret credentials are retained.
 
 ### Foods
 
@@ -301,6 +316,7 @@ Every supported TOML key has an environment override:
 | `app_version` | `FATSECRET_APP_VERSION` | Mobile app version sent in headers. |
 | `device_id` | `FATSECRET_DEVICE_ID` | Override the installation identity. Normally leave unset. |
 | `auth_url` | `FATSECRET_AUTH_URL` | Login endpoint. |
+| `google_auth_url` | `FATSECRET_GOOGLE_AUTH_URL` | Google login endpoint (HTTPS; loopback HTTP allowed for tests). |
 | `food_search_url` | `FATSECRET_FOOD_SEARCH_URL` | Food search. |
 | `food_popular_url` | `FATSECRET_FOOD_POPULAR_URL` | Popular servings. |
 | `food_vote_url` | `FATSECRET_FOOD_VOTE_URL` | Dietary-preference votes. |

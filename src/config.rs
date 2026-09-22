@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 pub const AUTH_URL_DEFAULT: &str = "https://app.ftscrt.com/api/authenticate/v1/fatsecret";
+pub const GOOGLE_AUTH_URL_DEFAULT: &str = "https://app.ftscrt.com/api/authenticate/v2/google";
 pub const FOOD_SEARCH_URL_DEFAULT: &str = "https://app.ftscrt.com/api/food/v1/search";
 pub const JOURNAL_URL_DEFAULT: &str =
     "https://app.ftscrt.com/api/user-data/v1/update-journal-entries";
@@ -54,6 +55,8 @@ pub const LANGUAGE_LOCALE_DEFAULT: &str = "en";
 pub struct AppConfig {
     #[serde(default = "default_auth_url")]
     pub auth_url: String,
+    #[serde(default = "default_google_auth_url")]
+    pub google_auth_url: String,
     #[serde(default = "default_food_search_url")]
     pub food_search_url: String,
     #[serde(default = "default_food_popular_url")]
@@ -107,6 +110,9 @@ pub struct AppConfig {
 }
 fn default_auth_url() -> String {
     AUTH_URL_DEFAULT.to_string()
+}
+fn default_google_auth_url() -> String {
+    GOOGLE_AUTH_URL_DEFAULT.to_string()
 }
 fn default_food_search_url() -> String {
     FOOD_SEARCH_URL_DEFAULT.to_string()
@@ -182,6 +188,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             auth_url: default_auth_url(),
+            google_auth_url: default_google_auth_url(),
             food_search_url: default_food_search_url(),
             food_popular_url: default_food_popular_url(),
             food_vote_url: default_food_vote_url(),
@@ -242,6 +249,9 @@ impl AppConfig {
         }
         if let Ok(v) = std::env::var("FATSECRET_AUTH_URL") {
             cfg.auth_url = v;
+        }
+        if let Ok(v) = std::env::var("FATSECRET_GOOGLE_AUTH_URL") {
+            cfg.google_auth_url = v;
         }
         if let Ok(v) = std::env::var("FATSECRET_FOOD_SEARCH_URL") {
             cfg.food_search_url = v;
@@ -314,6 +324,7 @@ pub(crate) fn default_config_path() -> Option<PathBuf> {
 /// Settable config keys (TOML key = struct field name).
 pub const SETTABLE_KEYS: &[&str] = &[
     "auth_url",
+    "google_auth_url",
     "food_search_url",
     "food_popular_url",
     "food_vote_url",
